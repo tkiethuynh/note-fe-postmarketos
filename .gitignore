@@ -1,0 +1,11 @@
+# Build artifacts & large binaries
+kernel/src/
+kernel/out/
+kernel/bin/
+kernel/Image
+*.img
+*.tar.gz
+*.cpio.gz
+port/linux-samsung-gracerlte/Image
+port/linux-samsung-gracerlte/dt.img
+port/device-samsung-gracerlte/gracerlte-firmware.tar.gz

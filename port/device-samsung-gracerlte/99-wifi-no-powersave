@@ -1,0 +1,4 @@
+#!/bin/sh
+if [ "$1" = "wlan0" ] && [ "$2" = "up" ]; then
+    iw dev wlan0 set power_save off 2>/dev/null || true
+fi

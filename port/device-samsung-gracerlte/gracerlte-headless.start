@@ -1,0 +1,95 @@
+#!/bin/sh
+LOG="/var/log/gracerlte-headless.log"
+exec >>"$LOG" 2>&1
+echo "=== $(date) gracerlte-headless start ==="
+
+# Keep device awake for headless operation
+if [ -w /sys/power/wake_lock ]; then
+	echo "stay-awake" > /sys/power/wake_lock || true
+fi
+
+# Turn off OLED display panel, backlight, and notification LEDs
+echo 1 > /sys/class/graphics/fb0/blank 2>/dev/null || true
+echo 4 > /sys/class/backlight/panel/bl_power 2>/dev/null || true
+echo 0 > /sys/class/backlight/panel/brightness 2>/dev/null || true
+for led in /sys/class/leds/*/brightness; do
+	[ -w "$led" ] && echo 0 > "$led" 2>/dev/null || true
+done
+
+# Mount Samsung EFS read-only so bcmdhd reads factory Wi-Fi MAC (/efs/wifi/.mac.info)
+mkdir -p /efs
+if ! mountpoint -q /efs; then
+	for dev in /dev/disk/by-partlabel/EFS /dev/sda3; do
+		if [ -b "$dev" ]; then
+			mount -o ro "$dev" /efs && break || true
+		fi
+	done
+fi
+
+# Ensure bcmdhd chipset ID exists
+mkdir -p /data/misc/conn
+if [ ! -s /data/misc/conn/.cid.info ]; then
+	printf "semco3rd\n" > /data/misc/conn/.cid.info
+fi
+
+# Ensure USB RNDIS gadget is enabled and configured at 172.16.42.1/24
+ANDROID_USB="/sys/class/android_usb/android0"
+if [ -d "$ANDROID_USB" ]; then
+	if ! ip link show rndis0 >/dev/null 2>&1 && ! ip link show usb0 >/dev/null 2>&1; then
+		echo 0 > "$ANDROID_USB/enable" 2>/dev/null || true
+		echo "" > "$ANDROID_USB/functions" 2>/dev/null || true
+		echo 1 > "$ANDROID_USB/enable" 2>/dev/null || true
+		sleep 1
+		echo 0 > "$ANDROID_USB/enable" 2>/dev/null || true
+		echo "04e8" > "$ANDROID_USB/idVendor" 2>/dev/null || true
+		echo "6863" > "$ANDROID_USB/idProduct" 2>/dev/null || true
+		echo "Samsung" > "$ANDROID_USB/iManufacturer" 2>/dev/null || true
+		echo "Galaxy Note FE (pmOS)" > "$ANDROID_USB/iProduct" 2>/dev/null || true
+		echo "rndis" > "$ANDROID_USB/functions" 2>/dev/null || true
+		echo 1 > "$ANDROID_USB/enable" 2>/dev/null || true
+		sleep 1
+	fi
+fi
+
+USB_IFACE=""
+for cand in rndis0 usb0; do
+	if ip link show "$cand" >/dev/null 2>&1; then
+		USB_IFACE="$cand"
+		break
+	fi
+done
+
+if [ -n "$USB_IFACE" ]; then
+	ip link set "$USB_IFACE" up || true
+	if ! ip -4 addr show dev "$USB_IFACE" | grep -q "172.16.42.1"; then
+		ip addr add 172.16.42.1/24 dev "$USB_IFACE" || true
+	fi
+	if ! pgrep -f "unudhcpd.*$USB_IFACE" >/dev/null 2>&1; then
+		if command -v unudhcpd >/dev/null 2>&1; then
+			unudhcpd -i "$USB_IFACE" -s 172.16.42.1 -c 172.16.42.2 >/dev/null 2>&1 &
+		fi
+	fi
+	echo "USB network configured on $USB_IFACE (172.16.42.1/24)"
+else
+	echo "WARNING: neither rndis0 nor usb0 found"
+fi
+
+# Enable 2GB lz4 ZRAM swap (3.18 has built-in zram, so modprobe in zramstart fails)
+if [ -b /dev/zram0 ] && ! grep -q '^/dev/zram0' /proc/swaps 2>/dev/null; then
+	echo lz4 > /sys/block/zram0/comp_algorithm 2>/dev/null || true
+	echo 2147483648 > /sys/block/zram0/disksize 2>/dev/null || true
+	mkswap /dev/zram0 >/dev/null 2>&1 || true
+	swapon -p 300 /dev/zram0 2>/dev/null || true
+	sysctl -w vm.page-cluster=0 vm.swappiness=100 vm.min_free_kbytes=100000 >/dev/null 2>&1 || true
+fi
+
+# Bring up Wi-Fi interface and disable powersave
+if ip link show wlan0 >/dev/null 2>&1; then
+	ip link set wlan0 up || true
+	if command -v iw >/dev/null 2>&1; then
+		iw dev wlan0 set power_save off 2>/dev/null || true
+	fi
+	echo "wlan0 initialized"
+else
+	echo "WARNING: wlan0 not found yet"
+fi

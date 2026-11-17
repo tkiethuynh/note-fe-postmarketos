@@ -1,0 +1,43 @@
+# Reference: <https://postmarketos.org/vendorkernel>
+maintainer=""
+pkgname=linux-samsung-gracerlte
+pkgver=3.18.140
+pkgrel=0
+pkgdesc="Samsung Galaxy Note FE (SM-N935L) downstream kernel from UBports 24"
+arch="aarch64"
+_flavor="samsung-gracerlte"
+url="https://gitlab.com/ubports/porting/community-ports/android11/samsung-galaxy-s7/kernel-samsung-universal8890"
+license="GPL-2.0-only"
+options="!strip !check !tracedeps pmb:cross-native"
+makedepends="devicepkg-dev"
+_config="config-$_flavor.$arch"
+source="
+	Image
+	dt.img
+	$_config
+"
+
+prepare() {
+	default_prepare
+}
+
+build() {
+	:
+}
+
+package() {
+	local _kver="3.18.140-ge697e3acd8b2"
+	install -Dm644 "$srcdir/Image" "$pkgdir/boot/vmlinuz"
+	install -Dm644 "$srcdir/dt.img" "$pkgdir/boot/dt.img"
+	mkdir -p "$pkgdir/usr/share/kernel/$_flavor"
+	echo "$_kver" > "$pkgdir/usr/share/kernel/$_flavor/kernel.release"
+	mkdir -p "$pkgdir/lib/modules/$_kver"
+	touch "$pkgdir/lib/modules/$_kver/modules.dep"
+	touch "$pkgdir/lib/modules/$_kver/modules.order"
+	touch "$pkgdir/lib/modules/$_kver/modules.builtin"
+}
+sha512sums="
+300fd439a269999c694cad91e30b85a66e743ab9804869257d69d8a2713ee3869ff9caea25025623ce27f38bc6f008e1dfa9f52e849001046aee4a8f296d5ac2  Image
+6c491f2b70ff9f60d881d98b43c3e5b88d6836a6ed66459c473bcd8de76fc93696dfcc4bdaba4d44c6a4e5cc8cc60b138bc8c90607e649cb4e96ddffd9f1473e  dt.img
+749f322c6725b85c9dbbe08a74cfcaf9f9143a1eabccfbd6e1053a246f757fc112d318e4e9cdb8fdba466072c0a37794b0b8922880598e085be5d9e85aac9269  config-samsung-gracerlte.aarch64
+"

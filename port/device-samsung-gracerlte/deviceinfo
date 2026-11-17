@@ -1,0 +1,38 @@
+# Reference: <https://postmarketos.org/deviceinfo>
+# Please use double quotes only. You can source this file in shell scripts.
+
+deviceinfo_format_version="0"
+deviceinfo_name="Samsung Galaxy Note FE"
+deviceinfo_manufacturer="Samsung"
+deviceinfo_codename="samsung-gracerlte"
+deviceinfo_year="2017"
+deviceinfo_dtb=""
+deviceinfo_arch="aarch64"
+
+# Device related
+deviceinfo_chassis="handset"
+deviceinfo_external_storage="true"
+deviceinfo_initfs_compression="gzip"
+deviceinfo_create_initfs_extra="true"
+
+# Bootloader related
+deviceinfo_flash_method="heimdall-bootimg"
+deviceinfo_generate_bootimg="true"
+deviceinfo_bootimg_qcdt="true"
+deviceinfo_bootimg_append_seandroidenforce="true"
+deviceinfo_flash_pagesize="2048"
+deviceinfo_flash_offset_base="0x10000000"
+deviceinfo_flash_offset_kernel="0x00008000"
+deviceinfo_flash_offset_ramdisk="0x01000000"
+deviceinfo_flash_offset_second="0xf0000000"
+deviceinfo_flash_offset_tags="0x00000100"
+deviceinfo_flash_heimdall_partition_kernel="BOOT"
+deviceinfo_flash_heimdall_partition_initfs="CACHE"
+deviceinfo_flash_heimdall_partition_rootfs="SYSTEM"
+
+# USB networking (matches Exynos 8890 android_usb RNDIS)
+deviceinfo_usb_idVendor="04e8"
+deviceinfo_usb_idProduct="6863"
+
+# Headless / kernel 3.18 ZRAM
+deviceinfo_zram_swap_algo="lz4"

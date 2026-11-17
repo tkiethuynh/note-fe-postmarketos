@@ -1,0 +1,69 @@
+# Reference: <https://postmarketos.org/devicepkg>
+maintainer=""
+pkgname=device-samsung-gracerlte
+pkgdesc="Samsung Galaxy Note FE (SM-N935L)"
+pkgver=1
+pkgrel=1
+url="https://postmarketos.org"
+license="MIT"
+arch="aarch64"
+options="!check !archcheck !strip !spdx !tracedeps"
+depends="
+	postmarketos-base
+	postmarketos-base-downstream
+	postmarketos-base-downstream-disable-udev-v4l
+	linux-samsung-gracerlte
+	mkbootimg
+"
+makedepends="devicepkg-dev"
+source="
+	deviceinfo
+	kernel-cmdline.conf
+	initfs-hook.sh
+	gracerlte-headless.start
+	90-gracerlte-unmanaged.conf
+	wifi-powersave.conf
+	99-wifi-no-powersave
+	gracerlte-firmware.tar.gz
+"
+
+build() {
+	devicepkg_build $startdir $pkgname
+}
+
+package() {
+	devicepkg_package $startdir $pkgname
+
+	# Install vendor firmware and Wi-Fi blobs extracted from Note FE
+	mkdir -p "$pkgdir/vendor"
+	cp -a "$srcdir/vendor/." "$pkgdir/vendor/"
+
+	# Fallback symlinks for bcmdhd base paths & standard Linux firmware paths
+	ln -sf bcmdhd_sta.bin_c0_plus_blob "$pkgdir/vendor/etc/wifi/bcmdhd_sta.bin"
+	ln -sf nvram_net.txt_c0_plus "$pkgdir/vendor/etc/wifi/nvram_net.txt"
+	mkdir -p "$pkgdir/etc" "$pkgdir/lib/firmware"
+	ln -sf /vendor/etc/wifi "$pkgdir/etc/wifi"
+	ln -sf /vendor/firmware "$pkgdir/lib/firmware/postmarketos"
+
+	# Headless OpenRC local.d script & NetworkManager unmanaged USB gadget rule
+	install -Dm755 "$srcdir/gracerlte-headless.start" \
+		"$pkgdir/etc/local.d/gracerlte-headless.start"
+	install -Dm644 "$srcdir/90-gracerlte-unmanaged.conf" \
+		"$pkgdir/etc/NetworkManager/conf.d/90-gracerlte-unmanaged.conf"
+	install -Dm644 "$srcdir/wifi-powersave.conf" \
+		"$pkgdir/etc/NetworkManager/conf.d/wifi-powersave.conf"
+	install -Dm755 "$srcdir/99-wifi-no-powersave" \
+		"$pkgdir/etc/NetworkManager/dispatcher.d/99-wifi-no-powersave"
+	mkdir -p "$pkgdir/etc/runlevels/default"
+	ln -sf /etc/init.d/local "$pkgdir/etc/runlevels/default/local"
+}
+sha512sums="
+150bd063b910f165d67d147a87bb27c1a6719de7e4b1dc0e6b9e38e71258c32d42f0b818a71ae7d383b1a1ad2dff4717fccaaec62b91d7269590029cd92aedf5  deviceinfo
+cb0731b5e71b427024bb47cd70aa48d3be409a89aa476f3fd4dea8e5b42ef87371a65bbe836bca7da04c0384178ad293b44da8a88557ad04fc57857bef502050  kernel-cmdline.conf
+b881ce9a3b9c8925b8ac35a50e1c1970ee783324d9d6d7b922ebe5979297d9cedc64c453faf6fbe53ca05fd2fd87d2abb54c538113cd8af8d023a1d1a9cdff63  initfs-hook.sh
+1b91c5098694f9b255b9b72a94cb6c16ece9715d4cbccc3712ca66c19bb1ac60e5846dc1e7f83219cc44fc921ebb9d83b8e9d2dae3fd4e2046cf45b1cd65202c  gracerlte-headless.start
+61e7c855c994603cededcde4b8e16d7fee71e2ce1a6c3eff8d6e53dd9c2b759282bab33455aed8c3ee07b823360ff185330c93bb4f7609269cfd071739280e37  90-gracerlte-unmanaged.conf
+8692b03ef5951179e8e2d622285925d8db9ec1999fe71c5611a37ba67f7c44b209c44ae4f467dfb3bb96f4b3257a243dc3060bf73e218d372fd06ca31e9e8de0  wifi-powersave.conf
+5041949cb00bc22cf32936c32323c38bdbd1ec513cde0e0201952129066c700027cdedfcb82b977ab9b7aeffad9032a7d5e36a7f71cc124a4dee40d4e9c12a2b  99-wifi-no-powersave
+27f2555e3c6933a2e55f5b67d5c2f8bfef64468c9b0d31ba0a76067dc046a150a90821b5970e09cbf8c102b6fe17660f6fdefd87222a4e4bf75716d6a97fd09  gracerlte-firmware.tar.gz
+"
