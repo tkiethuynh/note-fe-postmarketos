@@ -52,13 +52,42 @@ This produces `kernel/Image`. If you also place your device's `dt.img` and `ramd
 
 ---
 
-## 2. Proprietary Firmware Requirement
+## 2. Building a Full Image with `pmbootstrap`
+
+1. Initialize `pmbootstrap` (choose `edge` channel, `console` UI, and any placeholder device initially, or copy the port in first):
+   ```bash
+   pmbootstrap init
+   ```
+2. Copy the port packages into your `pmaports` tree (`testing`):
+   ```bash
+   PMAPORTS="$(pmbootstrap config aports)"
+   cp -r port/device-samsung-gracerlte "$PMAPORTS/device/testing/"
+   cp -r port/linux-samsung-gracerlte "$PMAPORTS/device/testing/"
+   ```
+3. Add the kernel binary (`kernel/Image` from step 1), `dt.img` (extracted from your device's `boot.img`), and `gracerlte-firmware.tar.gz` (see section 3), then update checksums:
+   ```bash
+   cp kernel/Image "$PMAPORTS/device/testing/linux-samsung-gracerlte/Image"
+   cp /path/to/dt.img "$PMAPORTS/device/testing/linux-samsung-gracerlte/dt.img"
+   cp /path/to/gracerlte-firmware.tar.gz "$PMAPORTS/device/testing/device-samsung-gracerlte/"
+
+   pmbootstrap checksum linux-samsung-gracerlte
+   pmbootstrap checksum device-samsung-gracerlte
+   ```
+4. Select `samsung-gracerlte` (`pmbootstrap init`) and build/install:
+   ```bash
+   pmbootstrap build linux-samsung-gracerlte device-samsung-gracerlte
+   pmbootstrap install --no-fde
+   ```
+
+---
+
+## 3. Proprietary Firmware Requirement
 
 Wi-Fi (`bcm4359`) requires Samsung/Broadcom firmware blobs from `/vendor/firmware` and `/vendor/etc/wifi` (not redistributed in this git repo). Extract them from your device's stock Android or Ubuntu Touch `/vendor` partition into `port/device-samsung-gracerlte/gracerlte-firmware.tar.gz` (containing `vendor/firmware/...` and `vendor/etc/wifi/...`) before building with `pmbootstrap`.
 
 ---
 
-## 3. Post-Install Notes (Docker + Headless)
+## 4. Post-Install Notes (Docker + Headless)
 
 ### Docker on Linux 3.18 (`cgroupfs` v1)
 Modern OpenRC defaults to `unified` (cgroup v2), which Linux 3.18 does not support. Switch `/etc/rc.conf` to `legacy` mode:
