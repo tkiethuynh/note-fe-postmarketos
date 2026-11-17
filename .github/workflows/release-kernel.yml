@@ -1,0 +1,35 @@
+name: Build & Release Kernel
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Linux 3.18.140 Image
+        run: ./scripts/build-kernel.sh
+
+      - name: Generate SHA256SUMS
+        run: |
+          cd kernel
+          sha256sum Image config-samsung-gracerlte.aarch64 > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            kernel/Image
+            kernel/SHA256SUMS
+          generate_release_notes: true
